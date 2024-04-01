@@ -1,0 +1,57 @@
+---
+title: "Week2.Rmd"
+output: html_document
+date: '2024-03-01'
+---
+
+Alignment of Reads to the Human Reference Genome
+For the alignment of ChIP-seq reads to the human reference genome, we utilized 
+Bowtie2 version 2.5.3 with default parameters. The trimmed FASTQ files were 
+aligned to the Bowtie2 index generated in the previous week's analysis. The 
+output of Bowtie2, in SAM format, was piped directly to samtools version 1.19.2 
+for conversion to the more efficient BAM format. This approach not only conserves 
+disk space but also allows for easier handling of the alignment files.
+
+Sorting and Indexing Alignment Files
+Following alignment, we sorted and indexed the aligned BAM files using samtools 
+version 1.19.2. Sorting the BAM files is crucial for downstream applications, as 
+it allows for faster access to specific genomic regions. The sorting was performed 
+based on genomic coordinates, and subsequently, BAM indices (.bai files) were 
+generated to facilitate rapid retrieval of alignments from the sorted BAM files.
+
+Quality Control Assessment
+Quality control assessment was conducted using samtools flagstat version 1.19.2, 
+which provides summary statistics on various aspects of the alignment. This 
+includes metrics such as the number of mapped reads, properly paired reads, and 
+duplicates. The flagstat analysis was performed individually for each aligned 
+sample, providing insight into the quality and characteristics of the alignments.
+
+Aggregation of Quality Control Outputs with MultiQC
+To aggregate the outputs from different quality control utilities and facilitate 
+easy visualization and comparison, we employed MultiQC version 1.20. This tool 
+generates a comprehensive HTML report summarizing the results from various QC 
+tools used in the analysis. By compiling information from multiple sources into 
+a single report, MultiQC simplifies the assessment of data quality and helps in 
+identifying potential issues or discrepancies across samples.
+
+Generation of BigWig Files and Correlation Analysis
+For downstream analysis and visualization of ChIP-seq data, we converted the 
+sorted BAM files to bigWig format using the bamCoverage utility from deeptools 
+version 3.5.4. This process involves dividing the genome into equally sized bins 
+and counting the number of alignments falling into each region. The resulting 
+bigWig files enable visualization of signal intensity across the genome, allowing 
+for the identification of regions enriched with ChIP-seq signal.
+
+Finally, to compare the similarity between samples based on their ChIP-seq signal 
+profiles, we performed correlation analysis using deeptools version 3.5.4. This 
+involved calculating Pearson correlation coefficients between the signal profiles 
+of different samples and visualizing the results as a clustered heatmap. This 
+analysis helps assess the reproducibility of ChIP-seq experiments and provides 
+insights into the consistency of binding patterns across experimental conditions 
+and replicates.
+
+![Pearson Correlation Heatmap of ChIP-seq Samples](/projectnb/bf528/students/akhilag/project-2-agundavelli/results/correlation_heatmap.png)
+
+
+
+

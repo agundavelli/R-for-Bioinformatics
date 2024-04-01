@@ -1,0 +1,123 @@
+import pandas
+
+sample_csv = pandas.read_csv('sample_sheet.csv', index_col='name')
+CONDITIONS = set(sample_csv['condition'].tolist())
+REPS = set(sample_csv['replicate'].tolist())
+
+rule all:
+    input:
+        expand("results/{condition}_{rep}.aligned.bam", condition=CONDITIONS, rep=REPS),
+        expand("results/{condition}_{rep}.sorted.aligned.bam", condition=CONDITIONS, rep=REPS),
+        expand("results/{condition}_{rep}.sorted.aligned.bam.bai", condition=CONDITIONS, rep=REPS),
+        expand("results/{condition}_{rep}.flagstat.txt", condition=CONDITIONS, rep=REPS),
+        "results/multiqc_report.html",
+        expand("results/{condition}_{rep}.bw", condition=CONDITIONS, rep=REPS),
+        "results/multiBigWigSummary.npz",
+        "results/correlation_heatmap.png"
+        ##expand("results/{condition}_{rep}_trimmed.fastq.gz", condition=CONDITIONS, rep=REPS)
+
+rule bowtie2_align:
+    input:
+        "results/{condition}_{rep}.trimmed.fastq.gz"
+    output:
+        "results/{condition}_{rep}.aligned.bam"
+    params:
+        'results/GRCh38.primary_assembly_index'
+    threads: 16
+    conda:
+        'envs/bowtie2_env.yml'
+    shell:
+        """
+        bowtie2 -p {threads} -x {params} -U {input} | samtools view -bS - > {output}
+        """
+
+
+rule samtools_sort:
+	input:
+	    bam_file = "results/{condition}_{rep}.aligned.bam"
+	output:
+	    sorted_bam = "results/{condition}_{rep}.sorted.aligned.bam" 
+	conda:
+		'envs/samtools_env.yml'
+	shell:
+	    """
+	    samtools sort -o {output.sorted_bam} {input.bam_file}
+	    """
+
+rule samtools_idx:
+	input:
+	    sorted_bam = "results/{condition}_{rep}.sorted.aligned.bam"  
+	output:
+	    bam_index = "results/{condition}_{rep}.sorted.aligned.bam.bai"
+	conda:
+		'envs/samtools_env.yml'
+	shell:
+	    """
+	    samtools index {input.sorted_bam} {output.bam_index}
+	    """
+
+
+rule samtools_flagstats:
+    input:
+        sorted_bam = "results/{condition}_{rep}.sorted.aligned.bam"
+    output:
+        flagstat_output = "results/{condition}_{rep}.flagstat.txt"
+    conda:
+        'envs/samtools_env.yml'
+    shell:
+        """
+        samtools flagstat {input.sorted_bam} > {output.flagstat_output}
+        """
+  
+
+rule multiqc:
+    input:
+        expand("results/{condition}_{rep}.flagstat.txt", condition=CONDITIONS, rep=REPS)
+    output:
+        "results/multiqc_report.html"
+    conda:
+	    'envs/multiqc_env.yml'
+    shell:
+	    """
+        multiqc results/ -n results/multiqc_report.html
+        """
+
+
+
+rule bamCoverage:
+	input:
+	    bam = "results/{condition}_{rep}.sorted.aligned.bam"  
+	output:
+	    bigwig = "results/{condition}_{rep}.bw"
+	threads: 4
+	conda:
+		'envs/deeptools_env.yml'
+	shell:
+	    """
+        bamCoverage -b {input.bam} -o {output.bigwig} -of bigwig
+        """
+
+
+rule multiBwSummary:
+	input:
+	    expand("results/{condition}_{rep}.bw", condition=CONDITIONS, rep=REPS)
+	output:
+	    "results/multiBigWigSummary.npz"
+	conda:
+		'envs/deeptools_env.yml'
+	shell:
+	    """
+        multiBigwigSummary bins --bwfiles {input} -o {output}
+        """
+
+rule plotCorrelation:
+    input:
+        "results/multiBigWigSummary.npz"
+    output:
+        "results/correlation_heatmap.png"
+    conda:
+        'envs/deeptools_env.yml'
+    shell:
+        """
+        plotCorrelation --corData {input} --whatToPlot heatmap --corMethod pearson --plotTitle "Pearson Correlation of ChIP-seq Samples" --plotNumbers --colorMap RdYlBu -o {output}
+        """

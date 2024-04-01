@@ -1,0 +1,78 @@
+---
+title: "Week1.Rmd"
+output: html_document
+date: '2024-03-01'
+---
+
+Use this notebook to quickly write the methods for the week:
+
+
+If asked, you may also include any plots or figures in this notebook as well:
+
+Week 1: ChIPseq Methods
+
+Paper Review
+We began by reviewing the paper titled "RUNX1 Contributes to Higher-Order 
+Chromatin Organization and Gene Regulation in Breast Cancer Cells" by Barutcu et
+al. (PMID: 27514584) to understand the study's hypotheses, objectives, and findings,
+providing us with a framework for our analyses.
+
+Repository Setup
+We structured our repository by organizing directories for results, samples, 
+environments, references, and documentation. We configured conda environments for 
+reproducibility. The bf528_project2_base environment was created using Snakemake 
+(version 8.5.2), Snakemake-executor-plugin-cluster-generic (version 1.0.7), 
+pandas (version 1.2.2), and JupyterLab (version 4.1.2). Additionally, we stored 
+sample information, such as the name, the SRR accession number, ftp link, condition, 
+replicate, and original SRR in a CSV file.
+
+Data Acquisition
+To obtain the full dataset files, we accessed the EMBL-ENA website and searched 
+for GSE75070, the listed GEO accession mentioned in the paper. From the "Project" 
+page for this accession, we located the "Read Files" section and matched the SRR 
+names with the files listed. We then updated the sample_sheet.csv with FTP links 
+for the full files. The wget_files Snakemake rule facilitates automated downloading 
+and consistent file naming.
+
+Quality Control
+We performed quality control on the 4 sample files using fastQC (version 0.12.1-0). 
+The fastqc Snakemake rule executed fastQC on the FASTQ files obtained from the 
+EMBL-ENA website using the wget_files rule and stored results in the results directory.
+
+Adapter Trimming
+To effectively tackle issues stemming from potential adapter contamination and 
+poor base quality in our sequencing reads, we employed trimmomatic (version 0.39) 
+within our Snakemake workflow. This tool specializes in adapter trimming and the 
+elimination of low-quality bases, crucial steps in preprocessing raw sequencing 
+data. Within our trimmomatic Snakemake rule, we specified parameters tailored to 
+our dataset's requirements. Notably, we utilized the ILLUMINACLIP parameter, 
+directing trimmomatic to utilize the adapter file. Additionally, we set specific 
+thresholds for trimming low-quality bases at the beginning and end of reads, 
+denoted by the parameters Leading and Trailing. Specifically, we employed a 
+threshold value of 3 for both parameters to ensure effective removal of low-quality 
+bases. Moreover, to address variability in base quality across sequencing reads, 
+we implemented sliding window trimming using the SlidingWindow parameter. Here, 
+we set a window size of 4 bases and a quality threshold of 15, enabling the 
+identification and removal of regions with poor quality bases. By incorporating 
+these parameter values into our trimmomatic rule, we aimed to enhance the overall 
+quality of our sequencing data, laying a solid foundation for subsequent downstream 
+analyses. After applying trimmomatic, we successfully trimmed the FASTQ files, 
+ensuring that only high-quality, adapter-free reads were retained for further analysis.
+
+Genome Indexing
+For efficient alignment, we generated a full genome index for the human reference 
+genome using bowtie2 (version 2.5.3). The bowtie2_build_gencode Snakemake rule 
+produced index files required for alignment.
+
+Conda Environments
+We utilized specific conda environments to ensure reproducibility:
+
+bf528_project2_base: Snakemake (version 8.5.2), Snakemake-executor-plugin-cluster
+-generic (version 1.0.7), pandas (version 1.2.2), and JupyterLab (version 4.1.2).
+bowtie: bowtie2 (version 2.5.3) and samtools (version 1.19.2).
+fastqc: fastQC (version 0.12.1-0).
+trimmomatic: trimmomatic (version 0.39).
+These versions were specified to ensure the exact replication of the analysis.
+
+
+

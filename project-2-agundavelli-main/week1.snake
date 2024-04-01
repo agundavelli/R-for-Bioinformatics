@@ -1,0 +1,65 @@
+import pandas
+
+sample_csv = pandas.read_csv('sample_sheet.csv', index_col='name')
+CONDITIONS = set(sample_csv['condition'].tolist())
+REPS = set(sample_csv['replicate'].tolist())
+
+rule all:
+    input:
+        expand('results/{condition}_{rep}.trimmed.fastq.gz', condition=CONDITIONS, rep=REPS),
+        'results/GRCh38.primary_assembly_index.1.bt2',
+        'results/GRCh38.primary_assembly_index.2.bt2',
+        'results/GRCh38.primary_assembly_index.3.bt2',
+        'results/GRCh38.primary_assembly_index.4.bt2',
+        'results/GRCh38.primary_assembly_index.rev.1.bt2',
+        'results/GRCh38.primary_assembly_index.rev.2.bt2'
+
+rule wget_files:
+    output:
+        'samples/{condition}_{rep}.fastq.gz'
+    params:
+        link = lambda wildcards: sample_csv.loc['{}_{}'.format(wildcards.condition, wildcards.rep), 'ftp_link'],
+        renamed = lambda wildcards: 'samples/{}_{}.fastq.gz'.format(wildcards.condition, wildcards.rep)
+    shell:
+        '''
+        wget -O {params.renamed} {params.link} 
+        '''
+
+rule bowtie2_build_gencode:
+    output: 
+        'results/GRCh38.primary_assembly_index.1.bt2',
+        'results/GRCh38.primary_assembly_index.2.bt2',
+        'results/GRCh38.primary_assembly_index.3.bt2',
+        'results/GRCh38.primary_assembly_index.4.bt2',
+        'results/GRCh38.primary_assembly_index.rev.1.bt2',
+        'results/GRCh38.primary_assembly_index.rev.2.bt2'
+    threads: 16
+    conda:
+        'envs/bowtie2_env.yml'
+    shell:
+        'bowtie2-build --threads {threads} results/GRCh38.primary_assembly.genome.fa.gz results/GRCh38.primary_assembly_index'
+
+rule fastqc:
+    input:
+        'samples/{condition}_{rep}.fastq.gz'
+    output:
+        'results/{condition}_{rep}_fastqc.html'
+    threads: 4
+    conda:
+        'envs/fastqc_env.yml'
+    shell:
+        'fastqc -t {threads} -o results/ {input}'
+
+rule trimmomatic:
+    input:
+        'samples/{condition}_{rep}.fastq.gz'
+    output:
+        'results/{condition}_{rep}.trimmed.fastq.gz'
+    params:
+        adapters='TruSeq3-SE.fa' 
+    threads: 8
+    conda:
+        'envs/trimmomatic_env.yml'
+    shell:
+        'trimmomatic SE -threads {threads} {input} {output} ILLUMINACLIP:{params.adapters}:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15'
+        

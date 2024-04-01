@@ -1,0 +1,62 @@
+---
+title: "Week3.Rmd"
+output: html_document
+date: '2024-03-01'
+---
+
+Methods
+
+Data Collection and Preprocessing
+Aligned reads from ChIP-seq experiments were obtained in BAM format. Basic 
+quality control measures were performed prior to peak calling. The following 
+software versions were utilized:
+
+samtools v1.19.2
+
+Peak Calling
+Peak calling was conducted using the HOMER suite (v4.11). Prior to peak calling, 
+BAM files were converted to a HOMER-specific format using the makeTagDir utility.
+This was performed individually for each sample, resulting in a separate tag 
+directory for each. The default parameters were used for this conversion process.
+
+Find Peaks
+The findPeaks command from HOMER was utilized for peak calling. This command was 
+run twice for each set of paired replicates (rep1 and rep2). Replicate pairs 
+consisted of Runx1 ChIP and input samples. Peak calling was conducted using the 
+-style factor option, suitable for identifying transcription factor binding sites 
+in relatively narrow patterns.
+
+Conversion to BED Format
+The output of findPeaks was in a HOMER-specific format (.txt). For ease of 
+downstream analysis, these peak files were converted to standard BED format using 
+the pos2bed.pl utility from HOMER.
+
+Identification of Reproducible Peaks
+Bedtools (v2.31.1) was employed to determine a set of reproducible peaks. This 
+involved the intersection of peak files generated from paired experiments (IP 
+and input) from each replicate. The bedtools intersect command was used for this 
+purpose.
+
+Blacklist Filtering
+Regions of the genome known to exhibit high levels of noise and signal artifacts 
+were identified using the blacklist file (hg38-blacklist.v2.bed). 
+Reproducible peaks falling within these regions were filtered out using the 
+bedtools intersect command.
+
+Annotation of Peaks
+The annotatePeaks.pl utility from HOMER was utilized to annotate reproducible 
+peaks to their nearest genomic feature. This annotation was performed using the 
+primary assembly annotation GTF file for genomic feature information. The hg19 
+human reference was specified because of compatibility requirements with HOMER.
+
+Motif Enrichment Analysis
+Motif finding was conducted using the findMotifsGenome.pl utility from HOMER. 
+This analysis aimed to identify enriched motifs within the list of filtered, 
+reproducible peaks. The reference genome FASTA file was provided as input and no
+additional options were specified for the genome. The FASTA file was decompressed 
+prior to analysis.
+
+Software Versions
+HOMER: v4.11
+samtools: v1.19.2
+bedtools: v2.31.1
